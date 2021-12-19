@@ -200,7 +200,7 @@ payload  map(value,index) ->
 output application/json
 ---
 {
-	"message" : "Location not available"
+	"message" : "Location not available..."
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
