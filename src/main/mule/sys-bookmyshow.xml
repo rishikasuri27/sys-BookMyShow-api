@@ -20,7 +20,7 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 			<wsc:web-service-security actor="http://schemas.xmlsoap.org/soap/actor/next" />
 		</wsc:connection>
 	</wsc:config>
-	<configuration-properties doc:name="Configuration properties" doc:id="bf277e69-5579-43ed-bf72-7d64e704d04a" file="config.yaml" />
+	<configuration-properties doc:name="Configuration properties" doc:id="ef065265-fc45-4ad7-8de2-8a504d8b9108" file="config.yaml" />
 	<flow name="getCities" doc:id="d832d308-0470-46ae-aa97-ea6698282f2f" >
 		<db:select doc:name="Select all cities" doc:id="80346e17-49d7-4641-ba16-c00ba4128f0c" config-ref="Database_Config">
 			<db:sql ><![CDATA[select distinct city from loc_details]]></db:sql>
