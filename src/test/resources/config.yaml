@@ -1,0 +1,2 @@
+consume:
+  address: "http://sys-ticketbooking-api-v1.us-e2.cloudhub.io/BookTicketService/BookTicketServiceSOAP"
