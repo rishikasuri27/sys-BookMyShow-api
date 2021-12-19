@@ -1,0 +1,14 @@
+%dw 2.0
+
+type auto_22142815_4ec6_4db8_a40b_a22f8d57a452_Output_Payload = {
+  duration?: String, 
+  cast?: String, 
+  releaseDate?: String, 
+  genre?: String, 
+  description?: String, 
+  language?: String, 
+  movie_name?: String, 
+  crew?: String, 
+  _?: Any
+} {"description": "These are the details of the selected movie"}
+

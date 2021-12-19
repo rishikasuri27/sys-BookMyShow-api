@@ -1,0 +1,18 @@
+%dw 2.0
+
+type auto_7653a342_f20b_41da_8e25_72835f58d9dc_Output_Payload = {
+  orderID: String, 
+  city: String, 
+  location: String, 
+  paymentDetails: {
+    Discount: String, 
+    "Amount-Paid": String, 
+    "Total-Price": String, 
+    _?: Any
+  }, 
+  movieName: String, 
+  customerName: String, 
+  seatsBooked: String, 
+  _?: Any
+}
+

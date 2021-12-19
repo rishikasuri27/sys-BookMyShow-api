@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://www.example.org/BookTicketService/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="BookTicketService" targetNamespace="http://www.example.org/BookTicketService/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://www.example.org/BookTicketService/">
+      <xsd:element name="BookTicket">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="customerName" type="xsd:string"/>
+            <xsd:element name="movieName" type="xsd:string"/>
+            <xsd:element name="location" type="xsd:string"/>
+            <xsd:element name="city" type="xsd:string"/>
+            <xsd:element name="seats" type="xsd:string"/>
+            <xsd:element name="timeslot" type="xsd:string"/>
+            <xsd:element name="couponCode" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+            <xsd:element name="price" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="BookTicketResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+          <xsd:element name="orderID" type="xsd:string"/>
+          <xsd:element name="custmerName" type="xsd:string"/>
+          <xsd:element name="movieName" type="xsd:string"/>
+          <xsd:element name="location" type="xsd:string"/>
+          <xsd:element name="city" type="xsd:string"/>
+          <xsd:element name="seatsBooked" type="xsd:string"/>
+          <xsd:element name="totalPrice" type="xsd:int"/>
+          <xsd:element name="discountPrice" type="xsd:int"/>
+          <xsd:element name="amountPaid" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="getTicket">
+      	<xsd:complexType>
+      		<xsd:sequence>
+
+      			<xsd:element name="orderId" type="xsd:string"></xsd:element>
+      		</xsd:sequence>
+      	</xsd:complexType>
+      </xsd:element>
+      <xsd:element name="getTicketResponse">
+      	<xsd:complexType>
+      		<xsd:sequence>
+
+      			 <xsd:element name="orderID" type="xsd:string"/>
+          <xsd:element name="custmerName" type="xsd:string"/>
+          <xsd:element name="movieName" type="xsd:string"/>
+          <xsd:element name="location" type="xsd:string"/>
+          <xsd:element name="city" type="xsd:string"/>
+          <xsd:element name="seatsBooked" type="xsd:string"/>
+          <xsd:element name="totalPrice" type="xsd:int"/>
+          <xsd:element name="discountPrice" type="xsd:int"/>
+          <xsd:element name="amountPaid" type="xsd:int"/>
+      		</xsd:sequence>
+      	</xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="BookTicketRequest">
+    <wsdl:part element="tns:BookTicket" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="BookTicketResponse">
+    <wsdl:part element="tns:BookTicketResponse" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="getTicketRequest">
+  	<wsdl:part name="parameters" element="tns:getTicket"></wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="getTicketResponse">
+  	<wsdl:part name="parameters" element="tns:getTicketResponse"></wsdl:part>
+  </wsdl:message>
+  <wsdl:portType name="BookTicketService">
+    <wsdl:operation name="BookTicket">
+      <wsdl:input message="tns:BookTicketRequest"/>
+      <wsdl:output message="tns:BookTicketResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="getTicket">
+    	<wsdl:input message="tns:getTicketRequest"></wsdl:input>
+    	<wsdl:output message="tns:getTicketResponse"></wsdl:output>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="BookTicketServiceSOAP"
+  	type="tns:BookTicketService">
+  	<soap:binding style="document"
+  		transport="http://schemas.xmlsoap.org/soap/http" />
+  	<wsdl:operation name="BookTicket">
+  		<soap:operation
+  			soapAction="http://www.example.org/BookTicketService/BookTicket" />
+  		<wsdl:input>
+  			<soap:body use="literal" />
+  		</wsdl:input>
+  		<wsdl:output>
+  			<soap:body use="literal" />
+  		</wsdl:output>
+  	</wsdl:operation>
+  	<wsdl:operation name="getTicket">
+  		<soap:operation
+  			soapAction="http://www.example.org/BookTicketService/getTicket" />
+  		<wsdl:input>
+  			<soap:body use="literal" />
+  		</wsdl:input>
+  		<wsdl:output>
+  			<soap:body use="literal" />
+  		</wsdl:output>
+  	</wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="BookTicketService">
+    <wsdl:port binding="tns:BookTicketServiceSOAP" name="BookTicketServiceSOAP">
+      <soap:address location="http://www.example.org/"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

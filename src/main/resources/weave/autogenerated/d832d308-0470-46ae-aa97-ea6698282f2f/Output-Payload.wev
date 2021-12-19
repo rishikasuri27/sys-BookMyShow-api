@@ -1,0 +1,6 @@
+%dw 2.0
+
+type auto_d832d308_0470_46ae_aa97_ea6698282f2f_Output_Payload = Array<{  city_name: Array<String>, 
+  _?: Any
+} {"description": "These are the movies available in the selected city"}>
+

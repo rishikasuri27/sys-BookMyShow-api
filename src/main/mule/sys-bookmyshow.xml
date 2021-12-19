@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="acbb2046-11e3-417c-b27d-614562787949" >
+		<db:my-sql-connection host="sql6.freesqldatabase.com" port="3306" user="sql6459792" password="wHK6dNvZe2" database="sql6459792" />
+	</db:config>
+	
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="a8aff958-f1e5-4dac-9c3c-4a52b9f08401" >
+		<wsc:connection wsdlLocation="api\BookTicketService.wsdl" service="BookTicketService" port="BookTicketServiceSOAP" address="http://localhost:8082/BookTicketService/BookTicketServiceSOAP" >
+			<wsc:custom-transport-configuration >
+				<wsc:default-http-transport-configuration timeout="500000" />
+			</wsc:custom-transport-configuration>
+		</wsc:connection>
+	</wsc:config>
+	<flow name="getCities" doc:id="d832d308-0470-46ae-aa97-ea6698282f2f" >
+		<db:select doc:name="Select all cities" doc:id="80346e17-49d7-4641-ba16-c00ba4128f0c" config-ref="Database_Config">
+			<db:sql ><![CDATA[select distinct city from loc_details]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Array of city names" doc:id="bf283108-67c8-40c6-96d5-f2f918fe2eb8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+cityName: payload map ( item , index ) -> {
+	(index + 1): item.city
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="720634b0-709d-479d-9aba-4754a2ed8e0d" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="2954a8a3-039d-41e4-bbe8-c331cf6228db" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc": error.description	
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="getMoviesByCity" doc:id="fa4755af-9a8e-4427-8abc-c5c98181bb3e" doc:description="Returns list of movies by City">
+		<set-variable value="#[upper(attributes.uriParams.city_name)]" doc:name="inc_city" doc:id="b1ddee64-ce07-433c-af35-7d67800959d4" variableName="inc_city" />
+		<db:select doc:name="Select all movies available in city" doc:id="6e706b0e-aef6-4420-b0c4-e64c7913fc14" config-ref="Database_Config" >
+			<db:sql ><![CDATA[select movie_name, lang, genre from movie_details where movie_name in
+(select distinct movie from loc_details where city = :city)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	city : vars.inc_city
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="fe1674c7-c978-4a03-8a10-da3fa08b5bee" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<ee:transform doc:name="Movies available" doc:id="f478ad0b-b7da-42f8-9870-7d6fb5836d26">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map(value, index)->
+{
+	movie_name: value.movie_name default "",
+	language: value.lang default "",
+	genre: value.genre default ""
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="d5139a8b-919d-4e2c-89e1-b20e3e19ec26" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message : "No movies running in " ++ vars.inc_city
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="387d5427-7108-4242-a4d4-d02d370b52a9" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="59311639-598a-4969-9600-89dc617c95e3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="getMovieDtls" doc:id="22142815-4ec6-4db8-a40b-a22f8d57a452" >
+		<set-variable value="#[upper(attributes.uriParams.movie_name)]" doc:name="inc_movie" doc:id="49a87dfd-4f8d-4d88-9fa4-ac38cf5202f1" variableName="inc_movie" />
+		<db:select doc:name="Select movie details available in the city" doc:id="fbf5d4b3-c10e-4797-80a4-aae518909905" config-ref="Database_Config" >
+			<db:sql ><![CDATA[select movie_name,lang,genre,movie_Desc,cast,crew,duration,release_date
+from movie_details 
+where movie_name = :movie]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{ movie: vars.inc_movie
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="5daa5a96-4905-4790-8604-3765c9ed8f75" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<ee:transform doc:name="Movie details" doc:id="d30f3d11-00d9-4db7-a8af-ffd7dc1f2a23">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+---
+payload map(value,index) ->
+{
+	movie_name: value.movie_name default "",
+	description: value.movie_Desc default "",
+	genre: value.genre default "",
+	language: value.lang default "",
+	duration: value.duration default "",
+	cast: value.cast default "",
+	crew: value.crew default "",
+	releaseDate: value.release_date  default ""
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="54026dc9-3ea0-4206-98fe-f909fae353ff" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "Movie not available"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="26f7f255-f24d-410e-bf8a-d48531d115c1" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="281f7904-9a4a-424a-81d1-d1b1c1863be3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="getLocationDtls" doc:id="1b1568f0-7684-441b-b31a-5918acda0167" >
+		<set-variable value="#[upper(attributes.queryParams.movie_name)]" doc:name="inc_bookMovie" doc:id="b8844de0-ff14-4881-85ba-8af090c833fa" variableName="inc_bookMovie" />
+		<set-variable value="#[upper(attributes.queryParams.city_name)]" doc:name="inc_bookCity" doc:id="d0b94427-4790-4e35-ac53-3103f62234bd" variableName="inc_bookCity" />
+		<db:select doc:name="Select location details" doc:id="7fb00f66-f0d1-4c78-ad90-878a1b9ee175" config-ref="Database_Config" >
+			<db:sql ><![CDATA[select movie, loc, address, timeslots, price from loc_details
+where movie = :movie and city = :city]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	city: vars.inc_bookCity,
+	movie: vars.inc_bookMovie
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="26b0c982-24e7-47b6-af70-5782166dc97e" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<ee:transform doc:name="location details" doc:id="9248aa31-fdfb-4957-82f3-43d827d83869">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload  map(value,index) ->
+{
+	location_name: value.loc default "",
+	address: value.address default "",
+	slots: splitBy(value.timeslots,';') default [],
+	Prices: value.price as String default ""
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="e3a6dc2f-fbcc-46c5-995c-388e27a483ab" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "Location not available"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="fac7f5ba-b6fb-4954-8f00-9322d9bcf90e" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="bccf1e6e-0811-40e9-8676-9007927c4a0e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="getTicket" doc:id="7f6da1c7-2300-4258-b1c2-9cc26c87bce1" >
+		<ee:transform doc:name="JSON to XML" doc:id="ea71c2f9-5de1-402b-b980-19b7d2a63a40" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.example.org/BookTicketService/
+---
+{
+	ns0#getTicket: {
+		orderId: attributes.queryParams.orderID
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<wsc:consume doc:name="Consume" doc:id="53d99805-8e9f-4bf7-973f-8fc402db471a" config-ref="Web_Service_Consumer_Config" operation="getTicket"/>
+		<ee:transform doc:name="XML to JSON" doc:id="8e615276-9656-47d7-a666-821f62fa3abe" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+---
+if(payload.body.getTicketResponse.orderId == "Incorrect orderId")
+{
+    "orderId": "Incorrect orderId"
+}
+else{
+	ETicket: {
+		orderId: payload.body.getTicketResponse.orderId default "",
+		customerName: payload.body.getTicketResponse.customerName default "",
+		movieName: payload.body.getTicketResponse.movieName default "",
+		location: payload.body.getTicketResponse.location default "",
+		city: payload.body.getTicketResponse.city default "",
+		seatsBooked: substringBefore(payload.body.getTicketResponse.seatsBooked, ';') default "",
+		slot:  substringAfter(payload.body.getTicketResponse.seatsBooked, ';') default "",
+		PriceDetails: {
+			"Total-Price": "Rs " ++ payload.body.getTicketResponse.TotalPrice as String default "",
+			Discount: "Rs " ++ payload.body.getTicketResponse.Discount as String default "",
+			"Amount-Paid": "Rs " ++ payload.body.getTicketResponse.AmountPaid as String default ""
+		}
+	}	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="af671b88-7f78-416a-963e-11b3e599ba23" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="9d1fec21-911d-4915-94bf-60efd0b51273" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="postBooking" doc:id="7653a342-f20b-41da-8e25-72835f58d9dc" >
+		<set-variable value="#[{&#10;	customerName : upper(payload.customerName),&#10;	movieName : upper(payload.movieName),&#10;	location : upper(payload.location),&#10;	city : upper(payload.city),&#10;	seats: payload.seats,&#10;	timeSlot : payload.timeSlot,&#10;	couponCode : upper(payload.couponCode)&#10;}]" doc:name="inc_data" doc:id="1a00b498-2d7f-457b-b576-607cfe596012" variableName="inc_data"/>
+		<db:select doc:name="Select price of ticket" doc:id="82b9be95-cb2c-4282-91f7-a9d4a9a16dbf" config-ref="Database_Config">
+			<db:sql ><![CDATA[select price from loc_details
+where movie = :movie and city = :city and loc =:loc]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	movie: vars.inc_data.movieName,
+	city : vars.inc_data.city,
+	loc : vars.inc_data.location
+}]]]></db:input-parameters>
+		</db:select>
+		<set-payload value="#[output application/json&#10;---&#10;{&#10;	price : payload.price[0]&#10;}]" doc:name="Set Payload" doc:id="efadb5a9-8ebd-4dcb-95da-26a39c4792ad" />
+		<set-variable value='#[payload.price as Number * vars.inc_data.seats as Number]' doc:name="totalPrice" doc:id="478523ed-a7b0-460b-8eb7-9f11fe9d34ba" variableName="totalPrice"/>
+		<choice doc:name="Choice" doc:id="462b025f-0872-40f8-bc27-d973a6d063bc" >
+			<when expression="#[(vars.totalPrice &gt; 1000 and (vars.inc_data.couponCode == 'COUP2' or &#10;	vars.inc_data.couponCode == 'COUP1'&#10;)) or &#10;(vars.totalPrice &gt; 500 and vars.totalPrice&lt; 1000 &#10;	and (vars.inc_data.couponCode == 'COUP1'&#10;))]">
+				<ee:transform doc:name="JSON to XML" doc:id="b31fd9a9-a81e-4dc9-9c12-925debccb02b">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.example.org/BookTicketService/
+---
+{
+	ns0#BookTicket: {
+		customerName: vars.inc_data.customerName,
+		movieName: vars.inc_data.movieName,
+		location: vars.inc_data.location,
+		city: vars.inc_data.city,
+		seats: vars.inc_data.seats,
+		timeslot: vars.inc_data.timeSlot,
+		couponCode: vars.inc_data.couponCode,
+		price: payload.price
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<wsc:consume doc:name="Consume" doc:id="74ec766e-a9f9-49e6-8e61-153b354db162" config-ref="Web_Service_Consumer_Config" operation="BookTicket" />
+				<ee:transform doc:name="XML to JSON" doc:id="2f4ba5a8-d454-4157-9b51-217f84659011">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Strings
+---
+{
+	ETicket: {
+		orderId: payload.body.BookTicketResponse.orderId default "",
+		customerName: payload.body.BookTicketResponse.customerName default "",
+		movieName: payload.body.BookTicketResponse.movieName default "",
+		location: payload.body.BookTicketResponse.location default "",
+		city: payload.body.BookTicketResponse.city default "",
+		seatsBooked: payload.body.BookTicketResponse.seatsBooked default "",
+		seatsBooked: substringBefore(payload.body.BookTicketResponse.seatsBooked, ';') default "",
+		slot:  substringAfter(payload.body.BookTicketResponse.seatsBooked, ';') default "",
+		PriceDetails: {
+			"Total-Price": "Rs " ++ payload.body.BookTicketResponse.TotalPrice as String default "",
+			Discount: "Rs " ++ payload.body.BookTicketResponse.Discount as String default "",
+			"Amount-Paid": "Rs " ++ payload.body.BookTicketResponse.AmountPaid as String default ""
+		}
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="ffbab7bf-1edc-4d97-af4c-7543728eaaaa" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message" : "Please select correct coupon code"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="866cd081-b52f-47d5-af4f-6145dac8bc4e" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="cb605445-68ff-4d16-92c8-15dbcfb58747" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="getCoupons" doc:id="53a6077f-9bf7-457f-b0e2-e9d5be6e0151" >
+		<db:select doc:name="Select" doc:id="757701f7-5228-45ff-8d90-97e533b99df6" config-ref="Database_Config">
+			<db:sql ><![CDATA[select code, coupon_desc from coupons]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="4da5ee8c-78ba-45c4-a0ad-44ced27a040d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Coupons : payload map (item,index) -> 
+	{
+	"couponCode": item.code,
+  "desc": item.coupon_desc
+  }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7fac3bd0-4967-4959-a5ab-faf9d84173db" type="ANY">
+				<ee:transform doc:name="Transform Message" doc:id="2d86723b-1733-49ba-82f5-1977cfda4e2b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"desc" : error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
